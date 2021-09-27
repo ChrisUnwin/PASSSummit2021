@@ -1,0 +1,29 @@
+trigger:
+- master
+  
+pool:
+  vmImage: 'ubuntu-latest'
+  
+steps:
+- task: DockerInstaller@0
+  inputs:
+    dockerVersion: '17.09.0-ce'
+  displayName: 'Install Docker'
+ 
+- task: Bash@3
+  inputs:
+    targettype: 'inline'
+    script: docker run --rm -v $(FLYWAY_BUILDTESTPATH):/flyway/sql flyway/flyway-azure:latest-alpine flyway clean -url=$(ciJDBC) -user=$(userName) -password=$(password)
+  displayName: 'Clean build schema'
+  
+- task: Bash@3
+  inputs:
+    targettype: 'inline'
+    script: docker run --rm -v $(FLYWAY_BUILDTESTPATH):/flyway/sql flyway/flyway-azure:latest-alpine flyway migrate -url=$(ciJDBC) -user=$(userName) -password=$(password)
+  displayName: 'Run flyway build & tests'
+
+- task: Bash@3
+  inputs:
+    targettype: 'inline'
+    script: docker run --rm -v $(FLYWAY_SCRIPTS):/flyway/sql flyway/flyway-azure:latest-alpine flyway migrate -url=$(prodJDBC) -user=$(userName) -password=$(password) -baselineOnMigrate=true
+  displayName: 'Deploy to Production'
